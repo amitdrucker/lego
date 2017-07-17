@@ -15,7 +15,7 @@ def get_links(uri, elem, attrs, find_all=False):
         if find_all:
             all_a = elem.findAll('a')
             for a in all_a:
-                if a:
+                if a and a.attrs['href'] not in result:
                     result.append(a.attrs['href'])
         else:
             a = elem.find('a')
@@ -29,7 +29,9 @@ years = get_links("http://lego.brickinstructions.com/en/showallyears",
 pages = []
 for link in years:
     print 'working on year ' + link
-    pages.extend(get_links(link, 'p', {'class': 'paginateGroup'}, True))
+
+    links = get_links(link, 'p', {'class': 'paginateGroup'}, True)
+    pages.extend(links)
 
 links = []
 for link in pages:
