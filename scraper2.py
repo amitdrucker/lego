@@ -9,10 +9,13 @@ h = httplib2.Http(".cache")
 
 
 def download_file(url, name, folder):
-    response = urllib2.urlopen(url)
-    file = open(folder + '/' + name, 'w')
-    file.write(response.read())
-    file.close()
+    try:
+        response = urllib2.urlopen(url)
+        file = open(folder + '/' + name, 'w')
+        file.write(response.read())
+        file.close()
+    except:
+        print ''
 
 
 def get_links(uri, elem, attrs, find_all=False, download=False, fol=None,
