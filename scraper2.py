@@ -1,57 +1,82 @@
 import json
 import os
+import re
+import shutil
+import threading
 import urllib2
 
 import httplib2
+import time
+
+import requests
 from bs4 import BeautifulSoup
 
 h = httplib2.Http(".cache")
+tcount = 0
 
 
-def download_file(url, name, folder):
-    try:
-        response = urllib2.urlopen(url)
-        file = open(folder + '/' + name, 'w')
-        file.write(response.read())
-        file.close()
-    except:
-        print ''
+def download_file(url, name, fol):
+    global tcount
+    print name
+    r = requests.get(url, stream=True)
+    if r.status_code == 200:
+        with open(fol + '/' + name, 'wb') as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+    tcount -= 1
 
 
-def get_links(uri, elem, attrs, find_all=False, download=False, fol=None,
-              excludeText=None):
+def slugify(value):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to hyphens.
+    """
+    import unicodedata
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
+    value = unicode(re.sub('[^\w\s-]', '', value).strip().lower())
+    value = unicode(re.sub('[-\s]+', '-', value))
+    return value
+
+
+def get_links(uri, elem, attrs, fol, excludeText):
+    global tcount
     resp, content = h.request(uri, "GET")
     soup = BeautifulSoup(content, 'html.parser')
     elems = soup.findAll(elem, attrs)
-    result = []
     for elem in elems:
-        if find_all:
-            all_a = elem.findAll('a')
-            for a in all_a:
-                if excludeText and excludeText in a.text:
-                    continue
-                curr_link = a.attrs['href']
-                print curr_link
-                if a and curr_link not in result:
-                    if download:
-                        name = curr_link[curr_link.rfind('/') + 1:]
-                        download_file(curr_link, name, fol)
-                    else:
-                        result.append(curr_link)
-                else:
-                    a = elem.find('a')
-                    if a:
-                        result.append(a.attrs['href'])
-    return result
+        all_a = elem.findAll('a')
+        for a in all_a:
+            if excludeText and excludeText in a.text:
+                continue
+            curr_link = a.attrs['href']
+            if '?' in curr_link:
+                print 'changing link name from ' + curr_link
+                curr_link = curr_link[:curr_link.rfind('?')]
+                print 'to ' + curr_link
+            print curr_link
+            name = curr_link[curr_link.rfind('/') + 1:]
+            tcount += 1
+            while tcount > 30:
+                time.sleep(0.1)
+            t = threading.Thread(target=download_file, args=(curr_link, name, fol))
+            t.daemon = True
+            t.start()
 
 
 links = json.loads(open('data.json', 'r').read())
 
 for link in links:
-    folder = link[link.rfind('/') + 1:]
+    if '?' in link:
+        link = link[:link.rfind('?')]
+    folder = 'data/' + slugify(link[link.rfind('/') + 1:])
+    print 'working on ' + link
     if not os.path.exists(folder):
         os.makedirs(folder)
+        try:
+            get_links(link, 'p', {'class': 'pdfLink'}, folder, 'View which')
+        except Exception, e:
+            print e
+            pass
+
     else:
-        continue
-    get_links(link, 'p', {'class': 'pdfLink'}, True,
-              True, folder, 'View which')
+        print 'extists. skipping...'
