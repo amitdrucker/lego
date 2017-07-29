@@ -1,12 +1,27 @@
 module.exports = function (app, uuidv4) {
 
-    var currentProcesses = {};
+    var bricksInModels, modelsInBrick, currentProcesses = {};
+    fs = require('fs');
+    fs.readFile('../bricksInModes.json', 'utf8', function (err, data) {
+        if (err) {
+            return console.log(err);
+        }
+        bricksInModels = JSON.parse(data);
+    });
+    fs.readFile('../modelsInBrick.json', 'utf8', function (err, data) {
+        if (err) {
+            return console.log(err);
+        }
+        modelsInBrick = JSON.parse(data);
+    });
+
+
     app.get('/api/todos:id', function (req, res) {
         if (!req.params.id) {
             req.params.id = uuidv4();
             currentProcesses[req.params.id] = [];
         }
-        res.json({'res':'ok'});
+
     });
 
     function handleResponse(id) {
