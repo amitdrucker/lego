@@ -1,6 +1,7 @@
 module.exports = function (app) {
 
     const uuidv4 = require('uuid/v4');
+    var path = require('path');
     var numOfModels, allBricksCount, allBricks,
         bricksInModelsMap, bricksInModel, modelsInBrick, modelNames, currentProcesses = {};
     fs = require('fs');
@@ -25,6 +26,21 @@ module.exports = function (app) {
         modelsInBrick = JSON.parse(data);
         allBricks = Object.keys(modelsInBrick);
         allBricksCount = allBricks.length;
+    });
+
+
+    app.get('/download-image', function (req, res) {
+        if (req.query.name.indexOf('png') === -1) {
+            req.query.name += '.jpg';
+        }
+        var file = '../blocks/' + req.query.name;
+        res.download(path.resolve(file));
+    });
+
+    app.get('/download-pdf', function (req, res) {
+        fs.readdir('../data/' + req.query.name, function (err, items) {
+            res.download(path.resolve('../data/' + req.query.name + '/' + items[0]));
+        });
     });
 
 
@@ -67,7 +83,7 @@ module.exports = function (app) {
 
     function handleResponse(id, contains, brick) {
         var res = {id: id}, clientData = currentProcesses[id];
-        res.matches = 0;
+        res.matches = [];
         if (!contains) {
             var currModel;
             for (var i = clientData.models.length - 1; i >= 0; i--) {
@@ -98,7 +114,7 @@ module.exports = function (app) {
                 minRemainingName = model;
             }
             if (remaining === 0) {
-                res.matches += 1;
+                res.matches.push(model);
                 clientData.matches.push(model);
                 clientData.models.splice(i, 1);
             }

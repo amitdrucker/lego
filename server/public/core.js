@@ -1,6 +1,6 @@
 var scotchTodo = angular.module('legoApp', []);
 
-function mainController($scope, $http) {
+function mainController($scope, $http, $sce) {
     $scope.formData = {};
 
     $scope.askServer = function (contains) {
@@ -11,6 +11,35 @@ function mainController($scope, $http) {
             })
             .success(function (data) {
                 $scope.formData = data;
+                $scope.image = 'http://localhost:8080/download-image?name='+$scope.formData.brick;
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
+    $scope.getImage = function () {
+        $http.get('/download-image',
+            {
+                params: {name:$scope.formData.brick}
+            })
+            .success(function (data) {
+                $scope.image = data;
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
+    $scope.openPdf = function (name) {
+        $http.get('/download-pdf',
+            {
+                params: {name:name}
+            })
+            .success(function (data) {
+                var file = new Blob([data], {type: 'application/pdf'});
+                var fileURL = URL.createObjectURL(file);
+                $scope.content = $sce.trustAsResourceUrl(fileURL);
             })
             .error(function (data) {
                 console.log('Error: ' + data);
