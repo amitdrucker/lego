@@ -1,6 +1,7 @@
-module.exports = function (app, uuidv4) {
+module.exports = function (app) {
 
-    var numOfModels,
+    const uuidv4 = require('uuid/v4');
+    var numOfModels, allBricksCount, allBricks,
         bricksInModelsMap, bricksInModel, modelsInBrick, modelNames, currentProcesses = {};
     fs = require('fs');
     fs.readFile('../bricksInModelsMap.json', 'utf8', function (err, data) {
@@ -22,26 +23,33 @@ module.exports = function (app, uuidv4) {
             return console.log(err);
         }
         modelsInBrick = JSON.parse(data);
+        allBricks = Object.keys(modelsInBrick);
+        allBricksCount = allBricks.length;
     });
 
 
-    app.get('/api/todos', function (req, res) {
+    app.get('/api/ask', function (req, res) {
         if (!req.query.id) {
             req.query.id = uuidv4();
             req.query.contains = true;
-            var model = modelNames[Math.round(Math.random() * numOfModels)];
-            req.query.brick = bricksInModel[model][0];
-            currentProcesses[req.query.id] = [
-                {
-                    models: [model],
-                    excluded: {},
-                    matches: []
-                }];
+            createNewClientData(req.query.id);
         }
+        res.send(handleResponse(req.query.id, req.query.contains, req.query.brick));
     });
 
+    function createNewClientData(id) {
+        var brick = allBricks[Math.round(Math.random() * allBricksCount)];
+        currentProcesses[id] =
+            {
+                models: [],
+                excluded: {},
+                matches: []
+            };
+        currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
+    }
+
     function handleResponse(id, contains, brick) {
-        var res = {}, clientData = currentProcesses[id];
+        var res = {id: id}, clientData = currentProcesses[id];
         res.matches = 0;
         if (!contains) {
             var currModel;
@@ -58,21 +66,36 @@ module.exports = function (app, uuidv4) {
                 res.brick = bricksInModel[clientData.models[0]][0];
             }
         } else {
-            clientData.excluded[brick] = brick;
-            for (i = clientData.models.length - 1; i >= 0; i--) {
-                var model = clientData.models[i];
-                if (bricksInModel[model].length === clientData.excluded.length) {
-                    res.matches += 1;
-                    clientData.matches.push(model);
-                    clientData.models.splice(i, 1);
+            // if !brick this is a new search
+            if (brick) {
+                clientData.excluded[brick] = brick;
+                var minRemaining, minRemainingName;
+                for (i = clientData.models.length - 1; i >= 0; i--) {
+                    var model = clientData.models[i];
+                    var remaining = bricksInModel[model].length - Object.keys(clientData.excluded).length;
+                    if (typeof minRemaining === 'undefined' || remaining < minRemaining) {
+                        minRemaining = remaining;
+                        minRemainingName = model;
+                    }
+                    if (remaining === 0) {
+                        res.matches += 1;
+                        clientData.matches.push(model);
+                        clientData.models.splice(i, 1);
+                    }
                 }
+                res.minRemaining = minRemaining;
+                res.minRemainingName = minRemainingName;
             }
             if (clientData.models) {
-                bricksInModel[clientData.models[0]].some(function ())
+                bricksInModel[clientData.models[0]].some(function (brick) {
+                    if (!clientData.excluded[brick]) {
+                        res.brick = brick;
+                        return true;
+                    }
+                });
             }
         }
-
-
+        return res;
     }
 
     // application -------------------------------------------------------------

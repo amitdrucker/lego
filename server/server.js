@@ -1,6 +1,5 @@
 // set up ======================================================================
 var express  = require('express');
-const uuidv4 = require('uuid/v4');
 var app      = express(); 								// create our app w/ express
 
 var morgan = require('morgan'); 		// log requests to the console (express4)
