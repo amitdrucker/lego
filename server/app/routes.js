@@ -3,7 +3,7 @@ module.exports = function (app) {
     const uuidv4 = require('uuid/v4');
     var path = require('path');
     var numOfModels, allBricksCount, allBricks,
-        bricksInModelsMap, bricksInModel, modelsInBrick, modelNames, currentProcesses = {};
+        bricksInModelsMap, bricksByPopularity, bricksInModel, modelsInBrick, modelNames, currentProcesses = {};
     fs = require('fs');
     fs.readFile('../bricksInModelsMap.json', 'utf8', function (err, data) {
         if (err) {
@@ -18,6 +18,13 @@ module.exports = function (app) {
             return console.log(err);
         }
         bricksInModel = JSON.parse(data);
+    });
+
+    fs.readFile('../bricksByPopularity.json', 'utf8', function (err, data) {
+        if (err) {
+            return console.log(err);
+        }
+        bricksByPopularity = JSON.parse(data);
     });
     fs.readFile('../modelsInBrick.json', 'utf8', function (err, data) {
         if (err) {
@@ -54,8 +61,13 @@ module.exports = function (app) {
     });
 
     function createNewClientData(id) {
-        var brick = allBricks[Math.round(Math.random() * allBricksCount)],
-            excluded = currentProcesses[id] ? currentProcesses[id].excluded : {};
+        var excluded = currentProcesses[id] ? currentProcesses[id].excluded : {},
+            brick = bricksByPopularity[0];
+        var counter = 1;
+        while (excluded[brick]) {
+            brick = bricksByPopularity[counter];
+            counter += 1;
+        }
         currentProcesses[id] =
             {
                 models: [],
