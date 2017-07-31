@@ -40,8 +40,18 @@
     <div class="text-center">
         <h1>Find Me A LEGO Model</h1>
     </div>
-    <button ng-click="onClick()">click me</button>
-    {{text}}
+    <div>
+        <button ng-click="askServer()">NO</button>
+        <img src="{{image}}">
+        <button ng-click="askServer(true)">YES</button>
+    </div>
+    <div>
+        {{formData}}
+    </div>
+    <div ng-repeat="match in formData.matches">
+        <a #href ng-click="openPdf(match)">click result...{{match}}</a>
+    </div>
+    <embed ng-if="content" ng-src="{{content}}" style="width:600px;height:400px;"></embed>
 
 </div>
 
