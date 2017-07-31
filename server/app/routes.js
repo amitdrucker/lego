@@ -52,52 +52,75 @@ module.exports = function (app) {
 
 
     app.get('/api/ask', function (req, res) {
+        var resBody = {};
         if (!req.query.id) {
             req.query.id = uuidv4();
-            req.query.contains = true;
-            createNewClientData(req.query.id);
+            createNewClientData(req.query.id, resBody);
         }
-        res.send(handleResponse(req.query.id, req.query.contains, req.query.brick));
+        resBody.id = req.query.id;
+        res.send(handleResponse(req.query.id, req.query.contains, req.query.brick, resBody));
     });
 
-    function createNewClientData(id) {
-        var excluded = currentProcesses[id] ? currentProcesses[id].excluded : {},
+    function createNewClientData(id, resBody) {
+        var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
             brick = bricksByPopularity[0];
         var counter = 1;
-        while (excluded[brick]) {
+        while (missing[brick]) {
             brick = bricksByPopularity[counter];
             counter += 1;
         }
         currentProcesses[id] =
             {
                 models: [],
-                excluded: excluded,
-                matches: []
+                excluded: [],
+                matches: [],
+                missing: missing
             };
         currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
-        return currentProcesses[id];
+        resBody.brick = brick;
+        return brick;
     }
 
-    function findBrick(clientData, res) {
-        while (clientData.models.length > 0) {
-            bricksInModel[clientData.models[0]].forEach(function (brick) {
-                if (!clientData.excluded[brick]) {
-                    res.brick = brick;
-                    return true;
-                }
-            });
-            if (res.brick) {
-                return res.brick;
+    function findBrick(clientData, resBody) {
+        delete resBody.brick;
+        var bestBrick, bestScore = 0;
+        bricksInModel[resBody.minRemainingName].forEach(function (brick) {
+            if (!clientData.excluded[brick] && modelsInBrick[brick].length > bestScore) {
+                bestBrick = brick;
+                bestScore = bricksByPopularity[brick];
             }
-            clientData.models.splice(0, 1);
-        }
+        });
+        resBody.brick = bestBrick;
     }
 
-    function handleResponse(id, contains, brick) {
-        var res = {id: id}, clientData = currentProcesses[id];
-        res.matches = [];
+    function populateMinRemaining(clientData, resBody) {
+        for (var i = clientData.models.length - 1; i >= 0; i--) {
+            var model = clientData.models[i];
+            var remaining = bricksInModel[model].length - Object.keys(clientData.excluded).length;
+            if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining) {
+                resBody.minRemaining = remaining;
+                resBody.minRemainingName = model;
+                if (remaining === 0) {
+                    resBody.matches.push(model);
+                    clientData.matches.push(model);
+                    clientData.models.splice(i, 1);
+                }
+            }
+        }
+        return i;
+    }
+
+    function handleResponse(id, contains, brick, resBody) {
+        var clientData = currentProcesses[id];
+        // in case this is new
+        if (!brick) {
+            populateMinRemaining(clientData, resBody);
+            return resBody;
+        }
+        resBody.matches = [];
         if (!contains) {
             var currModel;
+            clientData.missing[brick] = brick;
             for (var i = clientData.models.length - 1; i >= 0; i--) {
                 currModel = clientData.models[i];
                 if (bricksInModelsMap[currModel][brick]) {
@@ -105,39 +128,22 @@ module.exports = function (app) {
                 }
             }
             if (clientData.models.length === 0) {
-                res.msg = 'none found, starting again';
-                while (!res.brick) {
-                    clientData = createNewClientData(id, res);
-                    findBrick(clientData, res);
-                }
+                resBody.msg = 'none found, starting again';
+                createNewClientData(id, resBody);
+                clientData = currentProcesses[id];
+                populateMinRemaining(clientData, resBody);
+                return resBody;
             }
-        }
-
-        // if !brick this is a new search
-        if (brick && contains) {
+        } else {
             clientData.excluded[brick] = brick;
-        }
-        var minRemaining, minRemainingName;
-        for (i = clientData.models.length - 1; i >= 0; i--) {
-            var model = clientData.models[i];
-            var remaining = bricksInModel[model].length - Object.keys(clientData.excluded).length;
-            if (typeof minRemaining === 'undefined' || remaining < minRemaining) {
-                minRemaining = remaining;
-                minRemainingName = model;
-            }
-            if (remaining === 0) {
-                res.matches.push(model);
-                clientData.matches.push(model);
-                clientData.models.splice(i, 1);
+            populateMinRemaining(clientData, resBody);
+            if (clientData.models.length > 0) {
+                findBrick(clientData, resBody, resBody.minRemainingName);
+            } else {
+                resBody.finalResult = true;
             }
         }
-        res.minRemaining = minRemaining;
-        res.minRemainingName = minRemainingName;
-
-        if (clientData.models.length > 0) {
-            findBrick(clientData, res);
-        }
-        return res;
+        return resBody;
     }
 
 // application -------------------------------------------------------------
