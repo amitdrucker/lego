@@ -17,6 +17,7 @@ function mainController($scope, $http, $sce) {
                 console.log('Error: ' + data);
             });
     };
+    $scope.askServer();
 
     $scope.getImage = function () {
         $http.get('/download-image',

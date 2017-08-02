@@ -63,7 +63,7 @@ module.exports = function (app) {
 
     function createNewClientData(id, resBody) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
-            containing = currentProcesses[id] ? currentProcesses[id].containing : [],
+            containing = currentProcesses[id] ? currentProcesses[id].containing : {},
 
             brick = bricksByPopularity[0];
         var counter = 1;
@@ -76,7 +76,8 @@ module.exports = function (app) {
                 models: [],
                 containing: containing,
                 matches: [],
-                missing: missing
+                missing: missing,
+                model: undefined
             };
         currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
         resBody.brick = brick;
@@ -95,20 +96,23 @@ module.exports = function (app) {
         resBody.brick = bestBrick;
     }
 
-    function populateMinRemaining(clientData, resBody) {
+    function populateMinRemaining(clientData, resBody, haveModel, bricksInModelMap) {
         for (var i = clientData.models.length - 1; i >= 0; i--) {
             var model = clientData.models[i];
+            if (clientData.model && haveModel && model !== clientData.model) {
+                continue;
+            }
             var containingCounter = 0;
-            for (var j = clientData.containing.length - 1; i >= 0; i--) {
-                var containingBrick = clientData.containing[j];
-                if (bricksInModel[model][containingBrick]) {
+            Object.keys(clientData.containing).forEach(function (k) {
+                if (bricksInModelMap[model][k]) {
                     containingCounter += 1;
                 }
-            }
+            });
             var remaining = bricksInModel[model].length - containingCounter;
             if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining) {
                 resBody.minRemaining = remaining;
                 resBody.minRemainingName = model;
+                clientData.model = model;
                 if (remaining === 0) {
                     resBody.matches.push(model);
                     clientData.matches.push(model);
@@ -121,9 +125,10 @@ module.exports = function (app) {
 
     function handleResponse(id, contains, brick, resBody) {
         var clientData = currentProcesses[id];
+        var a = bricksInModelsMap;
         // in case this is new
         if (!brick) {
-            populateMinRemaining(clientData, resBody);
+            populateMinRemaining(clientData, resBody, undefined, bricksInModelsMap);
             return resBody;
         }
         resBody.matches = [];
@@ -140,17 +145,17 @@ module.exports = function (app) {
                 resBody.msg = 'none found, starting again';
                 createNewClientData(id, resBody);
                 clientData = currentProcesses[id];
-                populateMinRemaining(clientData, resBody);
+                populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
                 return resBody;
             }
         } else {
             clientData.containing[brick] = brick;
-            populateMinRemaining(clientData, resBody);
-            if (clientData.models.length > 0) {
-                findBrick(clientData, resBody, resBody.minRemainingName);
-            } else {
-                resBody.finalResult = true;
-            }
+        }
+        populateMinRemaining(clientData, resBody, contains, bricksInModelsMap);
+        if (clientData.models.length > 0) {
+            findBrick(clientData, resBody, resBody.minRemainingName);
+        } else {
+            resBody.finalResult = true;
         }
         return resBody;
     }
