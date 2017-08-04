@@ -1,6 +1,6 @@
 var scotchTodo = angular.module('legoApp', []);
 
-function mainController($scope, $http, $sce) {
+function mainController($scope, $http, $sce, $window) {
     $scope.formData = {};
 
     $scope.askServer = function (contains) {
@@ -11,7 +11,7 @@ function mainController($scope, $http, $sce) {
             })
             .success(function (data) {
                 $scope.formData = data;
-                $scope.image = 'http://localhost:8080/download-image?name='+$scope.formData.brick;
+                $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
             })
             .error(function (data) {
                 console.log('Error: ' + data);
@@ -22,7 +22,7 @@ function mainController($scope, $http, $sce) {
     $scope.getImage = function () {
         $http.get('/download-image',
             {
-                params: {name:$scope.formData.brick}
+                params: {name: $scope.formData.brick}
             })
             .success(function (data) {
                 $scope.image = data;
@@ -33,18 +33,16 @@ function mainController($scope, $http, $sce) {
     };
 
     $scope.openPdf = function (name) {
-        $http.get('/download-pdf',
-            {
-                params: {name:name}
-            })
-            .success(function (data) {
-                var file = new Blob([data], {type: 'application/pdf'});
-                var fileURL = URL.createObjectURL(file);
-                $scope.content = $sce.trustAsResourceUrl(fileURL);
-            })
-            .error(function (data) {
-                console.log('Error: ' + data);
-            });
+        var oReq = new XMLHttpRequest();
+        oReq.open("GET", "/download-pdf?name=" + name, true);
+        oReq.responseType = "arraybuffer";
+        oReq.onload = function () {
+            var file = new Blob([oReq.response], {type: "application/pdf"});
+            var fileURL = URL.createObjectURL(file);
+            // $scope.content = $sce.trustAsResourceUrl(fileURL);
+            $window.open(fileURL);
+        };
+        oReq.send();
     };
 
 
