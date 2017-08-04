@@ -1,7 +1,16 @@
 var scotchTodo = angular.module('legoApp', []);
 
-function mainController($scope, $http, $sce, $window) {
+function mainController($scope,
+                        $http,
+                        $sce,
+                        $window,
+                        $timeout) {
     $scope.formData = {};
+    $scope.matches = {};
+
+    $scope.getNumber = function (num) {
+        return new Array(num);
+    };
 
     $scope.askServer = function (contains) {
         $scope.formData.contains = contains;
@@ -12,12 +21,43 @@ function mainController($scope, $http, $sce, $window) {
             .success(function (data) {
                 $scope.formData = data;
                 $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
+                if ($scope.formData.matches.length > 0) {
+                    angular.forEach($scope.formData.matches, function (m) {
+                        if (!$scope.matches[m]) {
+                            $scope.matches[m] = [];
+                            $http.get('/count-pdf?name=' + m)
+                                .success(function (res) {
+                                    $scope.matches[res.name] = res.count;
+                                })
+                                .error(function (data) {
+                                    console.log('Error: ' + data);
+                                });
+                        }
+                    });
+                }
             })
             .error(function (data) {
                 console.log('Error: ' + data);
             });
     };
-    $scope.askServer();
+    var first = true;
+    doLoop = function (count) {
+        $timeout(function () {
+            if (!first) {
+                if (count < 41) {
+                    count++;
+                    $scope.askServer(true);
+                    doLoop(count);
+                }
+            } else {
+                count++;
+                first = false;
+                $scope.askServer();
+                doLoop(count);
+            }
+        }, 100);
+    };
+    doLoop(0);
 
     $scope.getImage = function () {
         $http.get('/download-image',
@@ -32,9 +72,9 @@ function mainController($scope, $http, $sce, $window) {
             });
     };
 
-    $scope.openPdf = function (name) {
+    $scope.openPdf = function (name, pdfNum) {
         var oReq = new XMLHttpRequest();
-        oReq.open("GET", "/download-pdf?name=" + name, true);
+        oReq.open("GET", "/download-pdf?name=" + name + "&pdfNum=" + pdfNum, true);
         oReq.responseType = "arraybuffer";
         oReq.onload = function () {
             var file = new Blob([oReq.response], {type: "application/pdf"});
@@ -44,30 +84,4 @@ function mainController($scope, $http, $sce, $window) {
         };
         oReq.send();
     };
-
-
-    // when submitting the add form, send the text to the node API
-    $scope.createTodo = function () {
-        $http.post('/api/todos', $scope.formData)
-            .success(function (data) {
-                $scope.formData = {}; // clear the form so our user is ready to enter another
-                $scope.todos = data;
-                console.log(data);
-            })
-            .error(function (data) {
-                console.log('Error: ' + data);
-            });
-    };
-
-    // delete a todo after checking it
-    $scope.deleteTodo = function (id) {
-        $http.delete('/api/todos/' + id)
-            .success(function (data) {
-                $scope.todos = data;
-            })
-            .error(function (data) {
-                console.log('Error: ' + data);
-            });
-    };
-
 }

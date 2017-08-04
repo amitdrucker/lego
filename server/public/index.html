@@ -48,8 +48,12 @@
     <div>
         {{formData}}
     </div>
-    <div ng-repeat="match in formData.matches">
-        <a #href ng-click="openPdf(match)">click result...{{match}}</a>
+
+    <div ng-if="formData.matches.length > 0"
+         ng-repeat="match in formData.matches">
+        <div ng-repeat="i in getNumber(matches[match]) track by $index">
+            <a #href ng-click="openPdf(match, $index)">{{match}}_{{$index+1}}.pdf</a>
+        </div>
     </div>
     <!--<embed ng-if="content" ng-src="{{content}}" style="width:200px;height:200px;"></embed>-->
 

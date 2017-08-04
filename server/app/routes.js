@@ -46,7 +46,14 @@ module.exports = function (app) {
 
     app.get('/download-pdf', function (req, res) {
         fs.readdir('../data/' + req.query.name, function (err, items) {
-            res.download(path.resolve('../data/' + req.query.name + '/' + items[0]));
+            res.download(path.resolve('../data/' + req.query.name + '/' + items[req.query.pdfNum]));
+        });
+    });
+
+    app.get('/count-pdf', function (req, res) {
+        fs.readdir('../data/' + req.query.name, function (err, items) {
+            // res.send({count: items.length, name: req.query.name});
+            res.send({count: 1, name: req.query.name});
         });
     });
 
@@ -64,6 +71,7 @@ module.exports = function (app) {
     function createNewClientData(id, resBody) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
             containing = currentProcesses[id] ? currentProcesses[id].containing : {},
+            matches = currentProcesses[id] ? currentProcesses[id].matches : [],
 
             brick = bricksByPopularity[0];
         var counter = 1;
@@ -75,12 +83,13 @@ module.exports = function (app) {
             {
                 models: [],
                 containing: containing,
-                matches: [],
+                matches: matches,
                 missing: missing,
                 model: undefined
             };
         currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
         resBody.brick = brick;
+        resBody.matches = currentProcesses[id].matches;
         return brick;
     }
 
@@ -128,7 +137,6 @@ module.exports = function (app) {
 
     function handleResponse(id, contains, brick, resBody) {
         var clientData = currentProcesses[id];
-        var a = bricksInModelsMap;
         // in case this is new
         if (!brick) {
             populateMinRemaining(clientData, resBody, undefined, bricksInModelsMap);
@@ -159,7 +167,6 @@ module.exports = function (app) {
         } else {
             resBody.finalResult = true;
         }
-        resBody.matches = clientData.matches;
         return resBody;
     }
 
