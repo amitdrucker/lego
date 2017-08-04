@@ -110,13 +110,16 @@ module.exports = function (app) {
             });
             var remaining = bricksInModel[model].length - containingCounter;
             if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining) {
-                resBody.minRemaining = remaining;
-                resBody.minRemainingName = model;
-                clientData.model = model;
                 if (remaining === 0) {
-                    resBody.matches.push(model);
                     clientData.matches.push(model);
                     clientData.models.splice(i, 1);
+                    if (clientData.model === model) {
+                        return populateMinRemaining(clientData, resBody, false, bricksInModelMap);
+                    }
+                } else {
+                    resBody.minRemaining = remaining;
+                    resBody.minRemainingName = model;
+                    clientData.model = model;
                 }
             }
         }
@@ -131,7 +134,6 @@ module.exports = function (app) {
             populateMinRemaining(clientData, resBody, undefined, bricksInModelsMap);
             return resBody;
         }
-        resBody.matches = [];
         if (!contains) {
             var currModel;
             clientData.missing[brick] = brick;
@@ -157,6 +159,7 @@ module.exports = function (app) {
         } else {
             resBody.finalResult = true;
         }
+        resBody.matches = clientData.matches;
         return resBody;
     }
 
