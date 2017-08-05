@@ -3,7 +3,8 @@ module.exports = function (app) {
     const uuidv4 = require('uuid/v4');
     var path = require('path');
     var numOfModels, allBricksCount, allBricks,
-        bricksInModelsMap, bricksByPopularity, bricksInModel, modelsInBrick, modelNames, currentProcesses = {};
+        modelsDict, bricksInModelsMap, bricksByPopularity, bricksInModel, modelsInBrick, modelNames,
+        currentProcesses = {};
     fs = require('fs');
     fs.readFile('../bricksInModelsMap.json', 'utf8', function (err, data) {
         if (err) {
@@ -11,6 +12,10 @@ module.exports = function (app) {
         }
         bricksInModelsMap = JSON.parse(data);
         modelNames = Object.keys(bricksInModelsMap);
+        modelsDict = {};
+        modelNames.forEach(function (name) {
+            modelsDict[name] = true;
+        });
         numOfModels = modelNames.length;
     });
     fs.readFile('../bricksInModel.json', 'utf8', function (err, data) {
@@ -74,8 +79,7 @@ module.exports = function (app) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
             containing = currentProcesses[id] ? currentProcesses[id].containing : {},
             matches = currentProcesses[id] ? currentProcesses[id].matches : [],
-
-            brick = bricksByPopularity[0];
+            brick = bricksByPopularity[Math.round(Math.random() * 500)];
         var counter = 1;
         while (missing[brick]) {
             brick = bricksByPopularity[counter];
@@ -89,7 +93,7 @@ module.exports = function (app) {
                 missing: missing,
                 model: undefined
             };
-        currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
+        populateModels(currentProcesses[id]);
         resBody.brick = brick;
         return brick;
     }
@@ -121,7 +125,9 @@ module.exports = function (app) {
             var remaining = bricksInModel[model].length - containingCounter;
             if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining) {
                 if (remaining === 0) {
-                    clientData.matches.push(model);
+                    if (clientData.matches.indexOf(model) === -1) {
+                        clientData.matches.push(model);
+                    }
                     clientData.models.splice(i, 1);
                     if (clientData.model === model) {
                         return populateMinRemaining(clientData, resBody, false, bricksInModelMap);
@@ -136,6 +142,18 @@ module.exports = function (app) {
         return i;
     }
 
+    function populateModels(clientData) {
+        clientData.models = JSON.parse(JSON.stringify(modelsDict));
+        Object.keys(clientData.missing).forEach(function (missing) {
+            modelNames.forEach(function (model) {
+                if (Object.keys(bricksInModelsMap[model]).length < 5 || bricksInModelsMap[model][missing]) {
+                    delete clientData.models[model];
+                }
+            });
+        });
+        clientData.models = Object.keys(clientData.models);
+    }
+
     function handleResponse(id, contains, brick, resBody) {
         var clientData = currentProcesses[id];
         // in case this is new
@@ -144,21 +162,8 @@ module.exports = function (app) {
             return resBody;
         }
         if (!contains) {
-            var currModel;
             clientData.missing[brick] = brick;
-            for (var i = clientData.models.length - 1; i >= 0; i--) {
-                currModel = clientData.models[i];
-                if (bricksInModelsMap[currModel][brick]) {
-                    clientData.models.splice(i, 1);
-                }
-            }
-            if (clientData.models.length === 0) {
-                resBody.msg = 'none found, starting again';
-                createNewClientData(id, resBody);
-                clientData = currentProcesses[id];
-                populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
-                return resBody;
-            }
+            populateModels(clientData);
         } else {
             clientData.containing[brick] = brick;
         }
