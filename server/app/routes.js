@@ -65,7 +65,9 @@ module.exports = function (app) {
             createNewClientData(req.query.id, resBody);
         }
         resBody.id = req.query.id;
-        res.send(handleResponse(req.query.id, req.query.contains, req.query.brick, resBody));
+        var newRes = handleResponse(req.query.id, req.query.contains, req.query.brick, resBody);
+        resBody.matches = currentProcesses[req.query.id].matches;
+        res.send(newRes);
     });
 
     function createNewClientData(id, resBody) {
@@ -89,7 +91,6 @@ module.exports = function (app) {
             };
         currentProcesses[id].models = JSON.parse(JSON.stringify(modelsInBrick[brick]));
         resBody.brick = brick;
-        resBody.matches = currentProcesses[id].matches;
         return brick;
     }
 

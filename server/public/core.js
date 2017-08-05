@@ -40,24 +40,25 @@ function mainController($scope,
                 console.log('Error: ' + data);
             });
     };
-    var first = true;
-    doLoop = function (count) {
-        $timeout(function () {
-            if (!first) {
-                if (count < 40) {
-                    count++;
-                    $scope.askServer(true);
-                    doLoop(count);
-                }
-            } else {
-                count++;
-                first = false;
-                $scope.askServer();
-                doLoop(count);
-            }
-        }, 100);
-    };
-    doLoop(0);
+    $scope.askServer();
+    // var first = true;
+    // doLoop = function (count) {
+    //     $timeout(function () {
+    //         if (!first) {
+    //             if (count < 40) {
+    //                 count++;
+    //                 $scope.askServer(true);
+    //                 doLoop(count);
+    //             }
+    //         } else {
+    //             count++;
+    //             first = false;
+    //             $scope.askServer();
+    //             doLoop(count);
+    //         }
+    //     }, 100);
+    // };
+    // doLoop(0);
 
     $scope.getImage = function () {
         $http.get('/download-image',
