@@ -44,7 +44,7 @@ function mainController($scope,
     doLoop = function (count) {
         $timeout(function () {
             if (!first) {
-                if (count < 41) {
+                if (count < 40) {
                     count++;
                     $scope.askServer(true);
                     doLoop(count);

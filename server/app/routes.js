@@ -95,11 +95,11 @@ module.exports = function (app) {
 
     function findBrick(clientData, resBody) {
         delete resBody.brick;
-        var bestBrick, bestScore = 0;
+        var bestBrick, bestScore = bricksByPopularity.length;
         bricksInModel[resBody.minRemainingName].forEach(function (brick) {
-            if (!clientData.containing[brick] && modelsInBrick[brick].length > bestScore) {
+            if (!clientData.containing[brick] && bricksByPopularity.indexOf(brick) < bestScore) {
                 bestBrick = brick;
-                bestScore = bricksByPopularity[brick];
+                bestScore = bricksByPopularity.indexOf(brick);
             }
         });
         resBody.brick = bestBrick;
