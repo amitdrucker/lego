@@ -1,65 +1,31 @@
 module.exports = function (app) {
-
+    fs = require('fs');
     const uuidv4 = require('uuid/v4');
     var path = require('path');
-    var numOfModels, allBricksCount, allBricks,
-        modelsDict, bricksInModelsMap, bricksByPopularity, bricksInModel, modelsInBrick, modelNames,
-        currentProcesses = {};
-    fs = require('fs');
-    fs.readFile('../bricksInModelsMap.json', 'utf8', function (err, data) {
-        if (err) {
-            return console.log(err);
-        }
-        bricksInModelsMap = JSON.parse(data);
-        modelNames = Object.keys(bricksInModelsMap);
-        modelsDict = {};
-        modelNames.forEach(function (name) {
-            modelsDict[name] = true;
-        });
-        numOfModels = modelNames.length;
+    var currentProcesses = {};
+    var bricksInModel = JSON.parse(fs.readFileSync('../data/bricksInModel.json'));
+    var bricksInModelsMap = JSON.parse(fs.readFileSync('../data/bricksInModelsMap.json'));
+    var bricksByPopularity = JSON.parse(fs.readFileSync('../data/bricksByPopularity.json'));
+    var modelNames = Object.keys(bricksInModelsMap);
+    var modelsDict = {};
+    modelNames.forEach(function (name) {
+        modelsDict[name] = true;
     });
-    fs.readFile('../bricksInModel.json', 'utf8', function (err, data) {
-        if (err) {
-            return console.log(err);
-        }
-        bricksInModel = JSON.parse(data);
-    });
-
-    fs.readFile('../bricksByPopularity.json', 'utf8', function (err, data) {
-        if (err) {
-            return console.log(err);
-        }
-        bricksByPopularity = JSON.parse(data);
-    });
-    fs.readFile('../modelsInBrick.json', 'utf8', function (err, data) {
-        if (err) {
-            return console.log(err);
-        }
-        modelsInBrick = JSON.parse(data);
-        allBricks = Object.keys(modelsInBrick);
-        allBricksCount = allBricks.length;
-    });
-
 
     app.get('/download-image', function (req, res) {
-        if (req.query.name.indexOf('png') === -1) {
-            req.query.name += '.jpg';
-        }
-        var file = '../blocks/' + req.query.name;
+        req.query.name += '.jpg';
+        var file = '../data/blocks/' + req.query.name;
         res.download(path.resolve(file));
     });
 
     app.get('/download-pdf', function (req, res) {
-        fs.readdir('../data/' + req.query.name, function (err, items) {
-            res.download(path.resolve('../data/' + req.query.name + '/' + items[req.query.pdfNum]));
-        });
+        var items = fs.readdirSync('../data/pdfs/' + req.query.name);
+        res.download(path.resolve('../data/pdfs/' + req.query.name + '/' + items[req.query.pdfNum]));
     });
 
     app.get('/count-pdf', function (req, res) {
-        fs.readdir('../data/' + req.query.name, function (err, items) {
-            // res.send({count: items.length, name: req.query.name});
-            res.send({count: 1, name: req.query.name});
-        });
+        var length = fs.readdirSync('../data/pdfs/' + req.query.name).length;
+        res.send({count: length, name: req.query.name});
     });
 
 
@@ -113,6 +79,9 @@ module.exports = function (app) {
     function populateMinRemaining(clientData, resBody, haveModel, bricksInModelMap) {
         for (var i = clientData.models.length - 1; i >= 0; i--) {
             var model = clientData.models[i];
+            if (bricksInModel[model].length < 10) {
+                continue;
+            }
             if (clientData.model && haveModel && model !== clientData.model) {
                 continue;
             }
@@ -123,7 +92,8 @@ module.exports = function (app) {
                 }
             });
             var remaining = bricksInModel[model].length - containingCounter;
-            if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining) {
+            if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining
+                || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
                 if (remaining === 0) {
                     if (clientData.matches.indexOf(model) === -1) {
                         clientData.matches.push(model);
