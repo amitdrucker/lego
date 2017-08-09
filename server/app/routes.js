@@ -79,7 +79,7 @@ module.exports = function (app) {
     function populateMinRemaining(clientData, resBody, haveModel, bricksInModelMap) {
         for (var i = clientData.models.length - 1; i >= 0; i--) {
             var model = clientData.models[i];
-            if (bricksInModel[model].length < 10) {
+            if (bricksInModel[model].length < 20) {
                 continue;
             }
             if (clientData.model && haveModel && model !== clientData.model) {
