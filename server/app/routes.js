@@ -6,6 +6,7 @@ module.exports = function (app) {
     var bricksInModel = JSON.parse(fs.readFileSync('../data/bricksInModel.json'));
     var bricksInModelsMap = JSON.parse(fs.readFileSync('../data/bricksInModelsMap.json'));
     var bricksByPopularity = JSON.parse(fs.readFileSync('../data/bricksByPopularity.json'));
+    var countPdfs = JSON.parse(fs.readFileSync('../data/countPdfs.json'));
     var modelNames = Object.keys(bricksInModelsMap);
     var modelsDict = {};
     modelNames.forEach(function (name) {
@@ -15,6 +16,13 @@ module.exports = function (app) {
     app.get('/download-image', function (req, res) {
         req.query.name += '.jpg';
         var file = '../data/blocks/' + req.query.name;
+        res.download(path.resolve(file));
+    });
+
+    app.get('/get-preview', function (req, res) {
+        var model = req.query.model;
+        var num = req.query.num;
+        var file = countPdfs[model][num];
         res.download(path.resolve(file));
     });
 
@@ -44,7 +52,7 @@ module.exports = function (app) {
     function createNewClientData(id, resBody) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
             containing = currentProcesses[id] ? currentProcesses[id].containing : {},
-            matches = currentProcesses[id] ? currentProcesses[id].matches : [],
+            matches = currentProcesses[id] ? currentProcesses[id].matches : {},
             brick = bricksByPopularity[Math.round(Math.random() * 500)];
         var counter = 1;
         while (missing[brick]) {
@@ -95,8 +103,8 @@ module.exports = function (app) {
             if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining
                 || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
                 if (remaining === 0) {
-                    if (clientData.matches.indexOf(model) === -1) {
-                        clientData.matches.push(model);
+                    if (!clientData.matches[model]) {
+                        clientData.matches[model] = countPdfs[model];
                     }
                     clientData.models.splice(i, 1);
                     if (clientData.model === model) {

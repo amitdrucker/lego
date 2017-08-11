@@ -22,7 +22,18 @@ function mainController($scope,
                 $scope.formData = data;
                 $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
                 if ($scope.formData.matches.length > 0) {
-                    angular.forEach($scope.formData.matches, function (m) {
+                    angular.forEach($scope.formData.matches, function (v, m) {
+                        $scope.formData.matches[m] = [];
+                        for (var i = 0; i < v.length; i++) {
+                            $scope.formData.matches[m].push('');
+                            $http.get('/get-preview?model=' + m + '&num=' + i)
+                                .success(function(data){
+                                $scope.formData.matches[m].splice(i,0,data);
+                            });
+
+                        }
+
+
                         if (!$scope.matches[m]) {
                             $scope.matches[m] = [];
                             $http.get('/count-pdf?name=' + m)
