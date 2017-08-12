@@ -50,10 +50,10 @@
     </div>
 
     <div ng-if="formData.matches.length > 0"
-         ng-repeat="match in formData.matches">
-        <div ng-repeat="i in getNumber(matches[match]) track by $index">
+         ng-repeat="match in modelToImages">
+        <div ng-repeat="i in getNumber(modelToImages[match]) track by $index">
             <a style="cursor: pointer" #href ng-click="openPdf(match, $index)">{{match}}_{{$index+1}}.pdf</a>
-            <img style="height: 200px; width: 200px" src="{{$scope.formData.matches[model]}}">
+            <img style="height: 200px; width: 200px" src="{{modelToImages[model][$index]}}">
         </div>
     </div>
     <!--<embed ng-if="content" ng-src="{{content}}" style="width:200px;height:200px;"></embed>-->

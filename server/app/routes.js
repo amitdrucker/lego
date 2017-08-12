@@ -6,7 +6,7 @@ module.exports = function (app) {
     var bricksInModel = JSON.parse(fs.readFileSync('../data/bricksInModel.json'));
     var bricksInModelsMap = JSON.parse(fs.readFileSync('../data/bricksInModelsMap.json'));
     var bricksByPopularity = JSON.parse(fs.readFileSync('../data/bricksByPopularity.json'));
-    var countPdfs = JSON.parse(fs.readFileSync('../data/countPdfs.json'));
+    var pdfsInModel = JSON.parse(fs.readFileSync('../data/pdfsInModel.json'));
     var modelNames = Object.keys(bricksInModelsMap);
     var modelsDict = {};
     modelNames.forEach(function (name) {
@@ -22,13 +22,13 @@ module.exports = function (app) {
     app.get('/get-preview', function (req, res) {
         var model = req.query.model;
         var num = req.query.num;
-        var file = countPdfs[model][num];
+        var file = pdfsInModel[model][num]+'.jpg';
         res.download(path.resolve(file));
     });
 
     app.get('/download-pdf', function (req, res) {
         // var items = fs.readdirSync('../data/pdfs/' + req.query.name);
-        res.download(path.resolve(countPdfs[req.query.name][req.query.pdfNum] + '.pdf'));
+        res.download(path.resolve(pdfsInModel[req.query.name][req.query.pdfNum] + '.pdf'));
     });
 
     app.get('/count-pdf', function (req, res) {
@@ -104,7 +104,7 @@ module.exports = function (app) {
                 || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
                 if (remaining === 0) {
                     if (!clientData.matches[model]) {
-                        clientData.matches[model] = countPdfs[model].length;
+                        clientData.matches[model] = pdfsInModel[model].length;
                     }
                     clientData.models.splice(i, 1);
                     if (clientData.model === model) {

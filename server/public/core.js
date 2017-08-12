@@ -6,17 +6,16 @@ function mainController($scope,
                         $window,
                         $timeout) {
     $scope.formData = {};
-    $scope.matches = {};
+    $scope.modelToImages = {};
 
     $scope.getNumber = function (num) {
         return new Array(num);
     };
 
     function populateMatchImage(model, num) {
-        $scope.formData.matches[model].push('');
         $http.get('/get-preview?model=' + model + '&num=' + num)
             .success(function (data) {
-                $scope.formData.matches[model].splice(num, 0, data);
+                $scope.modelToImages[model].splice(num, 0, data);
             })
             .error(function (data) {
                 console.log('Error: ' + data);
@@ -32,15 +31,15 @@ function mainController($scope,
             .success(function (data) {
                 $scope.formData = data;
                 $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
-                if ($scope.formData.matches.length > 0) {
-                    angular.forEach($scope.formData.matches, function (v, m) {
-                        if (!$scope.matches[m]) {
-                            $scope.matches[m] = [];
-                            for (i=0; i<$scope.formData.matches[m]; i++){
-                                $scope.matches[m].push('');
+                if (Object.keys($scope.formData.matches).length > 0) {
+                    angular.forEach($scope.formData.matches, function (len, model) {
+                        if (!$scope.modelToImages[model]) {
+                            $scope.modelToImages[model] = [];
+                            for (i=0; i<$scope.formData.matches[model]; i++){
+                                $scope.modelToImages[model].push('');
                             }
-                            for (var i = 0; i < v.length; i++) {
-                                populateMatchImage(m, i);
+                            for (var i = 0; i < len; i++) {
+                                populateMatchImage(model, i);
                             }
                         }
                     });
