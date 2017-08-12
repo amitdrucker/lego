@@ -27,8 +27,8 @@ module.exports = function (app) {
     });
 
     app.get('/download-pdf', function (req, res) {
-        var items = fs.readdirSync('../data/pdfs/' + req.query.name);
-        res.download(path.resolve('../data/pdfs/' + req.query.name + '/' + items[req.query.pdfNum]));
+        // var items = fs.readdirSync('../data/pdfs/' + req.query.name);
+        res.download(path.resolve(countPdfs[req.query.name][req.query.pdfNum] + '.pdf'));
     });
 
     app.get('/count-pdf', function (req, res) {
@@ -104,7 +104,7 @@ module.exports = function (app) {
                 || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
                 if (remaining === 0) {
                     if (!clientData.matches[model]) {
-                        clientData.matches[model] = countPdfs[model];
+                        clientData.matches[model] = countPdfs[model].length;
                     }
                     clientData.models.splice(i, 1);
                     if (clientData.model === model) {

@@ -12,6 +12,17 @@ function mainController($scope,
         return new Array(num);
     };
 
+    function populateMatchImage(model, num) {
+        $scope.formData.matches[model].push('');
+        $http.get('/get-preview?model=' + model + '&num=' + num)
+            .success(function (data) {
+                $scope.formData.matches[model].splice(num, 0, data);
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    }
+
     $scope.askServer = function (contains) {
         $scope.formData.contains = contains;
         $http.get('/api/ask',
@@ -23,26 +34,14 @@ function mainController($scope,
                 $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
                 if ($scope.formData.matches.length > 0) {
                     angular.forEach($scope.formData.matches, function (v, m) {
-                        $scope.formData.matches[m] = [];
-                        for (var i = 0; i < v.length; i++) {
-                            $scope.formData.matches[m].push('');
-                            $http.get('/get-preview?model=' + m + '&num=' + i)
-                                .success(function(data){
-                                $scope.formData.matches[m].splice(i,0,data);
-                            });
-
-                        }
-
-
                         if (!$scope.matches[m]) {
                             $scope.matches[m] = [];
-                            $http.get('/count-pdf?name=' + m)
-                                .success(function (res) {
-                                    $scope.matches[res.name] = res.count;
-                                })
-                                .error(function (data) {
-                                    console.log('Error: ' + data);
-                                });
+                            for (i=0; i<$scope.formData.matches[m]; i++){
+                                $scope.matches[m].push('');
+                            }
+                            for (var i = 0; i < v.length; i++) {
+                                populateMatchImage(m, i);
+                            }
                         }
                     });
                 }
@@ -51,6 +50,7 @@ function mainController($scope,
                 console.log('Error: ' + data);
             });
     };
+
     $scope.askServer();
     // var first = true;
     // doLoop = function (count) {
