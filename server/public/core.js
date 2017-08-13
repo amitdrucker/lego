@@ -2,25 +2,13 @@ var scotchTodo = angular.module('legoApp', []);
 
 function mainController($scope,
                         $http,
-                        $sce,
-                        $window,
-                        $timeout) {
+                        $window) {
     $scope.formData = {};
     $scope.modelToImages = {};
 
     $scope.getNumber = function (num) {
         return new Array(num);
     };
-
-    function populateMatchImage(model, num) {
-        $http.get('/get-preview?model=' + model + '&num=' + num)
-            .success(function (data) {
-                $scope.modelToImages[model].splice(num, 0, data);
-            })
-            .error(function (data) {
-                console.log('Error: ' + data);
-            });
-    }
 
     $scope.askServer = function (contains) {
         $scope.formData.contains = contains;
@@ -30,16 +18,18 @@ function mainController($scope,
             })
             .success(function (data) {
                 $scope.formData = data;
+                $scope.hasMatches = Object.keys($scope.formData.matches).length > 0;
                 $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
+                $scope.modelPreviews = [];
+                for (var i = 0; i < $scope.formData.modelPreviewsCount; i++) {
+                    $scope.modelPreviews.push('http://localhost:8080/download-preview?model=' + $scope.formData.minRemainingName + '&num=' + i);
+                }
                 if (Object.keys($scope.formData.matches).length > 0) {
                     angular.forEach($scope.formData.matches, function (len, model) {
                         if (!$scope.modelToImages[model]) {
                             $scope.modelToImages[model] = [];
-                            for (i=0; i<$scope.formData.matches[model]; i++){
-                                $scope.modelToImages[model].push('');
-                            }
-                            for (var i = 0; i < len; i++) {
-                                populateMatchImage(model, i);
+                            for (var i = 0; i < $scope.formData.matches[model]; i++) {
+                                $scope.modelToImages[model].push('http://localhost:8080/download-preview?model=' + model + '&num=' + i);
                             }
                         }
                     });
@@ -49,6 +39,15 @@ function mainController($scope,
                 console.log('Error: ' + data);
             });
     };
+
+    $scope.humanize = function (str) {
+        var frags = str.split('_');
+        for (var i = 0; i < frags.length; i++) {
+            frags[i] = frags[i].charAt(0).toUpperCase() + frags[i].slice(1);
+        }
+        return frags.join(' ');
+    };
+
 
     $scope.askServer();
     // var first = true;

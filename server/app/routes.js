@@ -19,10 +19,10 @@ module.exports = function (app) {
         res.download(path.resolve(file));
     });
 
-    app.get('/get-preview', function (req, res) {
+    app.get('/download-preview', function (req, res) {
         var model = req.query.model;
         var num = req.query.num;
-        var file = pdfsInModel[model][num]+'.jpg';
+        var file = pdfsInModel[model][num] + '.jpg';
         res.download(path.resolve(file));
     });
 
@@ -113,6 +113,7 @@ module.exports = function (app) {
                 } else {
                     resBody.minRemaining = remaining;
                     resBody.minRemainingName = model;
+                    resBody.modelPreviewsCount = pdfsInModel[model].length;
                     clientData.model = model;
                 }
             }
