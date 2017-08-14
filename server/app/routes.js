@@ -36,18 +36,64 @@ module.exports = function (app) {
         res.send({count: length, name: req.query.name});
     });
 
-
     app.get('/api/ask', function (req, res) {
         var resBody = {};
         if (!req.query.id) {
             req.query.id = uuidv4();
             createNewClientData(req.query.id, resBody);
         }
+        var clientData = currentProcesses[req.query.id];
         resBody.id = req.query.id;
-        var newRes = handleResponse(req.query.id, req.query.contains, req.query.brick, resBody);
+        handleResponse(req.query.id, req.query.contains, req.query.brick, resBody, req.query.onlyContinue);
         resBody.matches = currentProcesses[req.query.id].matches;
-        res.send(newRes);
+        resBody.containing = Object.keys(clientData.containing);
+        resBody.missing = Object.keys(clientData.missing);
+        res.send(resBody);
     });
+
+    app.get('/api/add', function (req, res) {
+        var resBody = {};
+        var model = req.query.model;
+        var clientData = currentProcesses[req.query.id];
+        resBody.id = req.query.id;
+        for (var i = 0; i < Object.keys(clientData.models.length); i++) {
+            if (clientData.models[i] === model) {
+                break;
+            }
+        }
+        handleAddModel(clientData, model, i);
+        populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
+        findBrick(clientData, resBody, resBody.minRemainingName);
+        resBody.matches = currentProcesses[req.query.id].matches;
+        res.send(resBody);
+    });
+
+    function handleResponse(id, contains, brick, resBody, onlyContinue) {
+        var clientData = currentProcesses[id];
+        // in case this is new
+        if (!brick) {
+            populateMinRemaining(clientData, resBody, undefined, bricksInModelsMap);
+            return resBody;
+        }
+        if (!contains) {
+            clientData.missing[brick] = brick;
+            populateModels(clientData);
+        } else if (!onlyContinue) {
+            clientData.containing[brick] = brick;
+        } else {
+            if (!clientData.ignoredBricks) {
+                clientData.ignoredBricks = {};
+            }
+            clientData.ignoredBricks[brick] = true;
+        }
+        populateMinRemaining(clientData, resBody, contains, bricksInModelsMap);
+        if (clientData.models.length > 0) {
+            findBrick(clientData, resBody);
+        } else {
+            resBody.finalResult = true;
+        }
+        return resBody;
+    }
 
     function createNewClientData(id, resBody) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
@@ -76,7 +122,9 @@ module.exports = function (app) {
         delete resBody.brick;
         var bestBrick, bestScore = bricksByPopularity.length;
         bricksInModel[resBody.minRemainingName].forEach(function (brick) {
-            if (!clientData.containing[brick] && bricksByPopularity.indexOf(brick) < bestScore) {
+            if (!clientData.containing[brick]
+                && !clientData.ignoredBricks[brick]
+                && bricksByPopularity.indexOf(brick) < bestScore) {
                 bestBrick = brick;
                 bestScore = bricksByPopularity.indexOf(brick);
             }
@@ -84,7 +132,17 @@ module.exports = function (app) {
         resBody.brick = bestBrick;
     }
 
+    function handleAddModel(clientData, model, i) {
+        if (!clientData.matches[model]) {
+            clientData.matches[model] = pdfsInModel[model].length;
+        }
+        clientData.models.splice(i, 1);
+    }
+
     function populateMinRemaining(clientData, resBody, haveModel, bricksInModelMap) {
+        if (!haveModel) {
+            clientData.ignoredBricks = {};
+        }
         for (var i = clientData.models.length - 1; i >= 0; i--) {
             var model = clientData.models[i];
             if (bricksInModel[model].length < 20) {
@@ -99,14 +157,16 @@ module.exports = function (app) {
                     containingCounter += 1;
                 }
             });
+            Object.keys(clientData.ignoredBricks).forEach(function (k) {
+                if (bricksInModelMap[model][k]) {
+                    containingCounter += 1;
+                }
+            });
             var remaining = bricksInModel[model].length - containingCounter;
             if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining
                 || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
                 if (remaining === 0) {
-                    if (!clientData.matches[model]) {
-                        clientData.matches[model] = pdfsInModel[model].length;
-                    }
-                    clientData.models.splice(i, 1);
+                    handleAddModel(clientData, model, i);
                     if (clientData.model === model) {
                         return populateMinRemaining(clientData, resBody, false, bricksInModelMap);
                     }
@@ -131,28 +191,6 @@ module.exports = function (app) {
             });
         });
         clientData.models = Object.keys(clientData.models);
-    }
-
-    function handleResponse(id, contains, brick, resBody) {
-        var clientData = currentProcesses[id];
-        // in case this is new
-        if (!brick) {
-            populateMinRemaining(clientData, resBody, undefined, bricksInModelsMap);
-            return resBody;
-        }
-        if (!contains) {
-            clientData.missing[brick] = brick;
-            populateModels(clientData);
-        } else {
-            clientData.containing[brick] = brick;
-        }
-        populateMinRemaining(clientData, resBody, contains, bricksInModelsMap);
-        if (clientData.models.length > 0) {
-            findBrick(clientData, resBody, resBody.minRemainingName);
-        } else {
-            resBody.finalResult = true;
-        }
-        return resBody;
     }
 
 // application -------------------------------------------------------------

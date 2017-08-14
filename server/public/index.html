@@ -44,10 +44,12 @@
         <button ng-click="askServer()">NO</button>
         <img style="height: 200px; width: 200px" src="{{image}}">
         <button ng-click="askServer(true)">YES</button>
+        <button ng-click="askServer(true, true)">Continue</button>
         <span ng-repeat="i in modelPreviews track by $index">
             <img style="height: 100px; width: 100px; cursor: pointer" src="{{modelPreviews[$index]}}"
                  ng-click="openPdf(formData.minRemainingName, $index)">
         </span>
+        <button ng-click="addModel(formData.minRemainingName)">+</button>
     </div>
     <div>
         {{formData}}

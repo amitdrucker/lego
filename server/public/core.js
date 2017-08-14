@@ -10,30 +10,59 @@ function mainController($scope,
         return new Array(num);
     };
 
-    $scope.askServer = function (contains) {
+    function handleMatchingModels() {
+        $scope.hasMatches = Object.keys($scope.formData.matches).length > 0;
+        if (Object.keys($scope.formData.matches).length > 0) {
+            angular.forEach($scope.formData.matches, function (len, model) {
+                if (!$scope.modelToImages[model]) {
+                    $scope.modelToImages[model] = [];
+                    for (var i = 0; i < $scope.formData.matches[model]; i++) {
+                        $scope.modelToImages[model].push('http://localhost:8080/download-preview?model=' + model + '&num=' + i);
+                    }
+                }
+            });
+        }
+    }
+
+    function handleCurrentPreviews() {
+        $scope.modelPreviews = [];
+        for (var i = 0; i < $scope.formData.modelPreviewsCount; i++) {
+            $scope.modelPreviews.push('http://localhost:8080/download-preview?model=' + $scope.formData.minRemainingName + '&num=' + i);
+        }
+    }
+
+    $scope.addModel = function (model) {
+        $http.get('/api/add',
+            {
+                params: {
+                    model: model,
+                    id: $scope.formData.id
+                }
+            })
+            .success(function (data) {
+                handleAskResponse(data);
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
+    function handleAskResponse(data) {
+        $scope.formData = data;
+        $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
+        handleCurrentPreviews();
+        handleMatchingModels();
+    }
+
+    $scope.askServer = function (contains, onlyContinue) {
         $scope.formData.contains = contains;
+        $scope.formData.onlyContinue = onlyContinue;
         $http.get('/api/ask',
             {
                 params: $scope.formData
             })
             .success(function (data) {
-                $scope.formData = data;
-                $scope.hasMatches = Object.keys($scope.formData.matches).length > 0;
-                $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
-                $scope.modelPreviews = [];
-                for (var i = 0; i < $scope.formData.modelPreviewsCount; i++) {
-                    $scope.modelPreviews.push('http://localhost:8080/download-preview?model=' + $scope.formData.minRemainingName + '&num=' + i);
-                }
-                if (Object.keys($scope.formData.matches).length > 0) {
-                    angular.forEach($scope.formData.matches, function (len, model) {
-                        if (!$scope.modelToImages[model]) {
-                            $scope.modelToImages[model] = [];
-                            for (var i = 0; i < $scope.formData.matches[model]; i++) {
-                                $scope.modelToImages[model].push('http://localhost:8080/download-preview?model=' + model + '&num=' + i);
-                            }
-                        }
-                    });
-                }
+                handleAskResponse(data);
             })
             .error(function (data) {
                 console.log('Error: ' + data);
