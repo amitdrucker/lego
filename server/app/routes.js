@@ -48,6 +48,7 @@ module.exports = function (app) {
         resBody.matches = currentProcesses[req.query.id].matches;
         resBody.containing = Object.keys(clientData.containing);
         resBody.missing = Object.keys(clientData.missing);
+        resBody.skippedModels = Object.keys(clientData.skippedModels);
         res.send(resBody);
     });
 
@@ -65,6 +66,29 @@ module.exports = function (app) {
         populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
         findBrick(clientData, resBody, resBody.minRemainingName);
         resBody.matches = currentProcesses[req.query.id].matches;
+        resBody.containing = Object.keys(clientData.containing);
+        resBody.missing = Object.keys(clientData.missing);
+        resBody.skippedModels = Object.keys(clientData.skippedModels);
+        res.send(resBody);
+    });
+
+    app.get('/api/skip', function (req, res) {
+        var resBody = {};
+        var model = req.query.model;
+        var clientData = currentProcesses[req.query.id];
+        clientData.skippedModels[model] = true;
+        resBody.id = req.query.id;
+        for (var i = 0; i < Object.keys(clientData.models.length); i++) {
+            if (clientData.models[i] === model) {
+                clientData.models.splice(i, 1);
+            }
+        }
+        populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
+        findBrick(clientData, resBody, resBody.minRemainingName);
+        resBody.matches = currentProcesses[req.query.id].matches;
+        resBody.containing = Object.keys(clientData.containing);
+        resBody.missing = Object.keys(clientData.missing);
+        resBody.skippedModels = Object.keys(clientData.skippedModels);
         res.send(resBody);
     });
 
@@ -99,7 +123,8 @@ module.exports = function (app) {
         var missing = currentProcesses[id] ? currentProcesses[id].missing : {},
             containing = currentProcesses[id] ? currentProcesses[id].containing : {},
             matches = currentProcesses[id] ? currentProcesses[id].matches : {},
-            brick = bricksByPopularity[Math.round(Math.random() * 500)];
+            brick = bricksByPopularity[Math.round(Math.random() * 500)],
+            skippedModels = currentProcesses[id] ? currentProcesses[id].skippedModels : {};
         var counter = 1;
         while (missing[brick]) {
             brick = bricksByPopularity[counter];
@@ -111,7 +136,8 @@ module.exports = function (app) {
                 containing: containing,
                 matches: matches,
                 missing: missing,
-                model: undefined
+                model: undefined,
+                skippedModels: skippedModels
             };
         populateModels(currentProcesses[id]);
         resBody.brick = brick;
@@ -145,6 +171,9 @@ module.exports = function (app) {
         }
         for (var i = clientData.models.length - 1; i >= 0; i--) {
             var model = clientData.models[i];
+            if (clientData.skippedModels[model] || clientData.matches[model]) {
+                continue;
+            }
             if (bricksInModel[model].length < 20) {
                 continue;
             }

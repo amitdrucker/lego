@@ -47,6 +47,22 @@ function mainController($scope,
             });
     };
 
+    $scope.skipModel = function (model) {
+        $http.get('/api/skip',
+            {
+                params: {
+                    model: model,
+                    id: $scope.formData.id
+                }
+            })
+            .success(function (data) {
+                handleAskResponse(data);
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
     function handleAskResponse(data) {
         $scope.formData = data;
         $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
