@@ -20,10 +20,11 @@ module.exports = function (app) {
     });
 
     app.get('/update-size', function (req, res) {
+        loadUserData(req);
         var clientData = currentProcesses[req.query.id];
         clientData.minModelSize = req.query.min;
         clientData.maxModelSize = req.query.max;
-        res.send();
+        completeResponse(res, undefined, clientData);
     });
 
     app.get('/download-preview', function (req, res) {
@@ -43,8 +44,22 @@ module.exports = function (app) {
         res.send({count: length, name: req.query.name});
     });
 
+    function loadUserData(req) {
+        if (req.query.userName) {
+            var filename = '../data/users/' + req.query.userName + '.json';
+            if (fs.existsSync(filename)) {
+                var userData = JSON.parse(fs.readFileSync(filename));
+                req.query.id = userData.id;
+                currentProcesses[userData.id] = userData;
+            } else if (req.query.id && currentProcesses[req.query.id]) {
+                currentProcesses[req.query.id].userName = req.query.userName;
+            }
+        }
+    }
+
     app.get('/api/ask', function (req, res) {
         var resBody = {};
+        loadUserData(req);
         if (!req.query.id) {
             req.query.id = uuidv4();
             createNewClientData(req.query.id, resBody);
@@ -52,52 +67,56 @@ module.exports = function (app) {
         var clientData = currentProcesses[req.query.id];
         resBody.id = req.query.id;
         handleResponse(req.query.id, req.query.contains, req.query.brick, resBody, req.query.onlyContinue);
-        resBody.matches = currentProcesses[req.query.id].matches;
-        resBody.containing = Object.keys(clientData.containing);
-        resBody.missing = Object.keys(clientData.missing);
-        resBody.skippedModels = Object.keys(clientData.skippedModels);
-        res.send(resBody);
+        completeResponse(res, resBody, clientData);
     });
 
     app.get('/api/add', function (req, res) {
+        loadUserData(req);
         var resBody = {};
         var model = req.query.model;
         var clientData = currentProcesses[req.query.id];
         resBody.id = req.query.id;
-        for (var i = 0; i < Object.keys(clientData.models.length); i++) {
-            if (clientData.models[i] === model) {
+        for (var i = 0; i < Object.keys(modelsDict).length; i++) {
+            if (modelsDict[i] === model) {
                 break;
             }
         }
         handleAddModel(clientData, model, i);
         populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
         findBrick(clientData, resBody, resBody.minRemainingName);
-        resBody.matches = currentProcesses[req.query.id].matches;
-        resBody.containing = Object.keys(clientData.containing);
-        resBody.missing = Object.keys(clientData.missing);
-        resBody.skippedModels = Object.keys(clientData.skippedModels);
-        res.send(resBody);
+        completeResponse(res, resBody, clientData);
+    });
+
+    app.get('/load-user', function (req, res) {
+        loadUserData(req);
+        var clientData = currentProcesses[req.query.id];
+        res.send(clientData);
     });
 
     app.get('/api/skip', function (req, res) {
+        loadUserData(req);
         var resBody = {};
         var model = req.query.model;
         var clientData = currentProcesses[req.query.id];
         clientData.skippedModels[model] = true;
         resBody.id = req.query.id;
-        for (var i = 0; i < Object.keys(clientData.models.length); i++) {
-            if (clientData.models[i] === model) {
-                clientData.models.splice(i, 1);
-            }
-        }
         populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
         findBrick(clientData, resBody, resBody.minRemainingName);
-        resBody.matches = currentProcesses[req.query.id].matches;
+        completeResponse(res, resBody, clientData);
+    });
+
+    function completeResponse(res, resBody, clientData) {
+        clientData.brick = resBody.brick;
+        resBody.matches = clientData.matches;
         resBody.containing = Object.keys(clientData.containing);
         resBody.missing = Object.keys(clientData.missing);
         resBody.skippedModels = Object.keys(clientData.skippedModels);
+        if (clientData.userName) {
+            fs.writeFileSync('../data/users/' + clientData.userName + '.json',
+                JSON.stringify(clientData));
+        }
         res.send(resBody);
-    });
+    }
 
     function handleResponse(id, contains, brick, resBody, onlyContinue) {
         var clientData = currentProcesses[id];
@@ -108,7 +127,6 @@ module.exports = function (app) {
         }
         if (!contains) {
             clientData.missing[brick] = brick;
-            populateModels(clientData);
         } else if (!onlyContinue) {
             clientData.containing[brick] = brick;
         } else {
@@ -118,7 +136,10 @@ module.exports = function (app) {
             clientData.ignoredBricks[brick] = true;
         }
         populateMinRemaining(clientData, resBody, contains, bricksInModelsMap);
-        if (clientData.models.length > 0) {
+        if (modelNames.length -
+            Object.keys(clientData.missing).length -
+            Object.keys(clientData.matches).length -
+            Object.keys(clientData.skippedModels).length > 0) {
             findBrick(clientData, resBody);
         } else {
             resBody.finalResult = true;
@@ -133,7 +154,8 @@ module.exports = function (app) {
             brick = bricksByPopularity[Math.round(Math.random() * 500)],
             skippedModels = currentProcesses[id] ? currentProcesses[id].skippedModels : {},
             minModelSize = currentProcesses[id] ? currentProcesses[id].minModelSize : 20,
-            maxModelSize = currentProcesses[id] ? currentProcesses[id].maxModelSize : 60;
+            maxModelSize = currentProcesses[id] ? currentProcesses[id].maxModelSize : 60,
+            userName = currentProcesses[id] ? currentProcesses[id].userName : undefined;
 
         var counter = 1;
         while (missing[brick]) {
@@ -142,6 +164,7 @@ module.exports = function (app) {
         }
         currentProcesses[id] =
             {
+                id: id,
                 models: [],
                 containing: containing,
                 matches: matches,
@@ -149,10 +172,11 @@ module.exports = function (app) {
                 model: undefined,
                 skippedModels: skippedModels,
                 minModelSize: minModelSize,
-                maxModelSize: maxModelSize
+                maxModelSize: maxModelSize,
+                userName: userName
             };
-        populateModels(currentProcesses[id]);
         resBody.brick = brick;
+        currentProcesses[id].brick = brick;
         return brick;
     }
 
@@ -174,7 +198,6 @@ module.exports = function (app) {
         if (!clientData.matches[model]) {
             clientData.matches[model] = pdfsInModel[model].length;
         }
-        clientData.models.splice(i, 1);
     }
 
     function populateMinRemaining(clientData, resBody, haveModel, bricksInModelMap) {
@@ -182,7 +205,7 @@ module.exports = function (app) {
             clientData.ignoredBricks = {};
         }
         var i, shuffled = {},
-            modelsLength = clientData.models.length;
+            modelsLength = modelNames.length;
 
         while (Object.keys(shuffled).length < modelsLength) {
             i = Math.floor(Math.random() * modelsLength);
@@ -190,7 +213,7 @@ module.exports = function (app) {
                 i = Math.floor(Math.random() * modelsLength);
             }
             shuffled[i] = true;
-            var model = clientData.models[i];
+            var model = modelNames[i];
             if (clientData.skippedModels[model] || clientData.matches[model]) {
                 continue;
             }
@@ -228,18 +251,6 @@ module.exports = function (app) {
             }
         }
         return i;
-    }
-
-    function populateModels(clientData) {
-        clientData.models = JSON.parse(JSON.stringify(modelsDict));
-        Object.keys(clientData.missing).forEach(function (missing) {
-            modelNames.forEach(function (model) {
-                if (Object.keys(bricksInModelsMap[model]).length < 5 || bricksInModelsMap[model][missing]) {
-                    delete clientData.models[model];
-                }
-            });
-        });
-        clientData.models = Object.keys(clientData.models);
     }
 
 // application -------------------------------------------------------------

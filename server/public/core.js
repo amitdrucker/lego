@@ -74,11 +74,27 @@ function mainController($scope,
                 params: {
                     min: min,
                     max: max,
-                    id: $scope.formData.id
+                    id: $scope.formData.id,
+                    userName: $scope.userName
                 }
             })
             .success(function () {
                 callResetModelSize(min);
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
+    $scope.addName = function (userName) {
+        $scope.userName = userName;
+        $scope.formData.userName = $scope.userName;
+        $http.get('/load-user',
+            {
+                params: $scope.formData
+            })
+            .success(function (data) {
+                handleAskResponse(data);
             })
             .error(function (data) {
                 console.log('Error: ' + data);
@@ -90,7 +106,8 @@ function mainController($scope,
             {
                 params: {
                     model: model,
-                    id: $scope.formData.id
+                    id: $scope.formData.id,
+                    userName: $scope.userName
                 }
             })
             .success(function (data) {
@@ -106,7 +123,8 @@ function mainController($scope,
             {
                 params: {
                     model: model,
-                    id: $scope.formData.id
+                    id: $scope.formData.id,
+                    userName: $scope.userName
                 }
             })
             .success(function (data) {
@@ -128,6 +146,7 @@ function mainController($scope,
     $scope.askServer = function (contains, onlyContinue) {
         $scope.formData.contains = contains;
         $scope.formData.onlyContinue = onlyContinue;
+        $scope.formData.userName = $scope.userName;
         $http.get('/api/ask',
             {
                 params: $scope.formData
