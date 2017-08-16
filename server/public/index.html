@@ -59,6 +59,12 @@
     <label for="tiny">tiny</label>
     <input type="radio" ng-model="modelSizes[1]" value=true ng-change="updateSize(20,40)" id="small">
     <label for="small">small</label>
+    <input type="radio" ng-model="modelSizes[2]" value=true ng-change="updateSize(40,60)" id="medium">
+    <label for="medium">medium</label>
+    <input type="radio" ng-model="modelSizes[3]" value=true ng-change="updateSize(60,80)" id="large">
+    <label for="large">large</label>
+    <input type="radio" ng-model="modelSizes[3]" value=true ng-change="updateSize(80, -1)" id="hugh">
+    <label for="hugh">hugh</label>
 
     <div ng-if="hasMatches"
          ng-repeat="(model, arr) in modelToImages">

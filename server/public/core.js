@@ -59,10 +59,10 @@ function mainController($scope,
             case 40:
                 resetModelSizes(2);
                 break;
-            case 70:
+            case 60:
                 resetModelSizes(3);
                 break;
-            case 100:
+            case 80:
                 resetModelSizes(4);
                 break;
         }

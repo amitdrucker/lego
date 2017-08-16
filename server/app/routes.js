@@ -194,7 +194,8 @@ module.exports = function (app) {
             if (clientData.skippedModels[model] || clientData.matches[model]) {
                 continue;
             }
-            if (bricksInModel[model].length < clientData.minModelSize || bricksInModel[model].length >= clientData.maxModelSize) {
+            if (bricksInModel[model].length < clientData.minModelSize ||
+                (clientData.maxModelSize > 0 && bricksInModel[model].length >= clientData.maxModelSize)) {
                 continue;
             }
             if (clientData.model && haveModel && model !== clientData.model) {
