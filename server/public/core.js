@@ -31,6 +31,60 @@ function mainController($scope,
         }
     }
 
+    $scope.modelSizes = [
+        false,
+        false,
+        false,
+        false,
+        false
+    ];
+
+    function resetModelSizes(num) {
+        $scope.modelSizes[num] = 'true';
+        for (var i = 0; i < $scope.modelSizes.length; i++) {
+            if (i !== num) {
+                $scope.modelSizes[i] = false;
+            }
+        }
+    }
+
+    function callResetModelSize(min) {
+        switch (min) {
+            case 5:
+                resetModelSizes(0);
+                break;
+            case 20:
+                resetModelSizes(1);
+                break;
+            case 40:
+                resetModelSizes(2);
+                break;
+            case 70:
+                resetModelSizes(3);
+                break;
+            case 100:
+                resetModelSizes(4);
+                break;
+        }
+    }
+
+    $scope.updateSize = function (min, max) {
+        $http.get('/update-size',
+            {
+                params: {
+                    min: min,
+                    max: max,
+                    id: $scope.formData.id
+                }
+            })
+            .success(function () {
+                callResetModelSize(min);
+            })
+            .error(function (data) {
+                console.log('Error: ' + data);
+            });
+    };
+
     $scope.addModel = function (model) {
         $http.get('/api/add',
             {
@@ -66,6 +120,7 @@ function mainController($scope,
     function handleAskResponse(data) {
         $scope.formData = data;
         $scope.image = 'http://localhost:8080/download-image?name=' + $scope.formData.brick;
+        callResetModelSize($scope.formData.minModelSize);
         handleCurrentPreviews();
         handleMatchingModels();
     }

@@ -19,6 +19,13 @@ module.exports = function (app) {
         res.download(path.resolve(file));
     });
 
+    app.get('/update-size', function (req, res) {
+        var clientData = currentProcesses[req.query.id];
+        clientData.minModelSize = req.query.min;
+        clientData.maxModelSize = req.query.max;
+        res.send();
+    });
+
     app.get('/download-preview', function (req, res) {
         var model = req.query.model;
         var num = req.query.num;
@@ -124,7 +131,10 @@ module.exports = function (app) {
             containing = currentProcesses[id] ? currentProcesses[id].containing : {},
             matches = currentProcesses[id] ? currentProcesses[id].matches : {},
             brick = bricksByPopularity[Math.round(Math.random() * 500)],
-            skippedModels = currentProcesses[id] ? currentProcesses[id].skippedModels : {};
+            skippedModels = currentProcesses[id] ? currentProcesses[id].skippedModels : {},
+            minModelSize = currentProcesses[id] ? currentProcesses[id].minModelSize : 20,
+            maxModelSize = currentProcesses[id] ? currentProcesses[id].maxModelSize : 60;
+
         var counter = 1;
         while (missing[brick]) {
             brick = bricksByPopularity[counter];
@@ -137,7 +147,9 @@ module.exports = function (app) {
                 matches: matches,
                 missing: missing,
                 model: undefined,
-                skippedModels: skippedModels
+                skippedModels: skippedModels,
+                minModelSize: minModelSize,
+                maxModelSize: maxModelSize
             };
         populateModels(currentProcesses[id]);
         resBody.brick = brick;
@@ -169,12 +181,20 @@ module.exports = function (app) {
         if (!haveModel) {
             clientData.ignoredBricks = {};
         }
-        for (var i = clientData.models.length - 1; i >= 0; i--) {
+        var i, shuffled = {},
+            modelsLength = clientData.models.length;
+
+        while (Object.keys(shuffled).length < modelsLength) {
+            i = Math.floor(Math.random() * modelsLength);
+            while (shuffled[i]) {
+                i = Math.floor(Math.random() * modelsLength);
+            }
+            shuffled[i] = true;
             var model = clientData.models[i];
             if (clientData.skippedModels[model] || clientData.matches[model]) {
                 continue;
             }
-            if (bricksInModel[model].length < 20) {
+            if (bricksInModel[model].length < clientData.minModelSize || bricksInModel[model].length >= clientData.maxModelSize) {
                 continue;
             }
             if (clientData.model && haveModel && model !== clientData.model) {
@@ -191,16 +211,15 @@ module.exports = function (app) {
                     containingCounter += 1;
                 }
             });
-            var remaining = bricksInModel[model].length - containingCounter;
-            if (typeof resBody.minRemaining === 'undefined' || remaining < resBody.minRemaining
-                || (remaining === resBody.minRemaining && Math.random() > 0.5)) {
+            if (typeof resBody.containing === 'undefined' || containingCounter > resBody.containing) {
+                var remaining = bricksInModel[model].length - containingCounter;
                 if (remaining === 0) {
                     handleAddModel(clientData, model, i);
                     if (clientData.model === model) {
                         return populateMinRemaining(clientData, resBody, false, bricksInModelMap);
                     }
                 } else {
-                    resBody.minRemaining = remaining;
+                    resBody.remaining = remaining;
                     resBody.minRemainingName = model;
                     resBody.modelPreviewsCount = pdfsInModel[model].length;
                     clientData.model = model;
