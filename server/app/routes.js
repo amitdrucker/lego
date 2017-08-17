@@ -111,6 +111,16 @@ module.exports = function (app) {
         resBody.containing = Object.keys(clientData.containing);
         resBody.missing = Object.keys(clientData.missing);
         resBody.skippedModels = Object.keys(clientData.skippedModels);
+
+        if (resBody.remaining) {
+            clientData.remaining = resBody.remaining;
+        }
+        if (resBody.minRemainingName) {
+            clientData.minRemainingName = resBody.minRemainingName;
+        }
+        if (resBody.modelPreviewsCount) {
+            clientData.modelPreviewsCount = resBody.modelPreviewsCount;
+        }
         if (clientData.userName) {
             fs.writeFileSync('../data/users/' + clientData.userName + '.json',
                 JSON.stringify(clientData));
