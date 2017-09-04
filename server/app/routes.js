@@ -8,6 +8,7 @@ module.exports = function (app) {
     var bricksByPopularity = JSON.parse(fs.readFileSync('../data/bricksByPopularity.json'));
     var pdfsInModel = JSON.parse(fs.readFileSync('../data/pdfsInModel.json'));
     var modelNames = Object.keys(bricksInModelsMap);
+    var modelsInBrick = JSON.parse(fs.readFileSync('../data/modelsInBrick.json'));
     var modelsDict = {};
     modelNames.forEach(function (name) {
         modelsDict[name] = true;
@@ -91,6 +92,13 @@ module.exports = function (app) {
     app.get('/load-user', function (req, res) {
         loadUserData(req);
         var clientData = currentProcesses[req.query.id];
+        clientData = {
+            id: clientData.id,
+            remaining: clientData.remaining,
+            minRemainingName: clientData.minRemainingName,
+            modelPreviewsCount: clientData.modelPreviewsCount,
+            brick: clientData.brick
+        };
         res.send(clientData);
     });
 
@@ -113,7 +121,7 @@ module.exports = function (app) {
         resBody.matches = clientData.matches;
         resBody.containing = Object.keys(clientData.containing);
         resBody.missing = Object.keys(clientData.missing);
-        resBody.skippedModels = Object.keys(clientData.skippedModels);
+        // resBody.skippedModels = Object.keys(clientData.skippedModels);
 
         if (resBody.remaining) {
             clientData.remaining = resBody.remaining;
@@ -140,6 +148,9 @@ module.exports = function (app) {
         }
         if (!contains) {
             clientData.missing[brick] = brick;
+            modelsInBrick[brick].forEach(function (name) {
+                clientData.skippedModels[name] = name;
+            });
         } else if (!onlyContinue) {
             clientData.containing[brick] = brick;
         } else {
@@ -150,7 +161,6 @@ module.exports = function (app) {
         }
         populateMinRemaining(clientData, resBody, contains, bricksInModelsMap);
         if (modelNames.length -
-            Object.keys(clientData.missing).length -
             Object.keys(clientData.matches).length -
             Object.keys(clientData.skippedModels).length > 0) {
             findBrick(clientData, resBody);

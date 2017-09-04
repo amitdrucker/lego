@@ -2,7 +2,8 @@ var scotchTodo = angular.module('legoApp', []);
 
 function mainController($scope,
                         $http,
-                        $window) {
+                        $window,
+                        $timeout) {
     $scope.formData = {};
     $scope.modelToImages = {};
 
@@ -173,13 +174,18 @@ function mainController($scope,
 
 
     $scope.askServer();
-    // var first = true;
+    var first = true;
+
     // doLoop = function (count) {
     //     $timeout(function () {
     //         if (!first) {
-    //             if (count < 40) {
+    //             if (count < 400) {
     //                 count++;
     //                 $scope.askServer(true);
+    //                 if ($scope.formData.containing.indexOf($scope.formData.brick) > -1) {
+    //                     console.log('!!!!!!!!!' + $scope.formData.brick + '!!!!!!!!!!');
+    //                     return;
+    //                 }
     //                 doLoop(count);
     //             }
     //         } else {
@@ -188,7 +194,7 @@ function mainController($scope,
     //             $scope.askServer();
     //             doLoop(count);
     //         }
-    //     }, 100);
+    //     }, 300);
     // };
     // doLoop(0);
 
