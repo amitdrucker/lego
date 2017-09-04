@@ -24,7 +24,8 @@ module.exports = function (app) {
         var clientData = currentProcesses[req.query.id];
         clientData.minModelSize = req.query.min;
         clientData.maxModelSize = req.query.max;
-        completeResponse(res, undefined, clientData);
+        var resBody = {brick: clientData.brick};
+        completeResponse(res, resBody, clientData);
     });
 
     app.get('/download-preview', function (req, res) {
@@ -98,7 +99,9 @@ module.exports = function (app) {
         var resBody = {};
         var model = req.query.model;
         var clientData = currentProcesses[req.query.id];
-        clientData.skippedModels[model] = true;
+        if (!req.query.onlyUpdateSize) {
+            clientData.skippedModels[model] = true;
+        }
         resBody.id = req.query.id;
         populateMinRemaining(clientData, resBody, false, bricksInModelsMap);
         findBrick(clientData, resBody, resBody.minRemainingName);

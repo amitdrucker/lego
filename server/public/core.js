@@ -48,6 +48,8 @@ function mainController($scope,
         }
     }
 
+    resetModelSizes(1);
+
     function callResetModelSize(min) {
         switch (min) {
             case 5:
@@ -80,6 +82,7 @@ function mainController($scope,
             })
             .success(function () {
                 callResetModelSize(min);
+                $scope.skipModel($scope.formData.minRemainingName, true);
             })
             .error(function (data) {
                 console.log('Error: ' + data);
@@ -118,13 +121,14 @@ function mainController($scope,
             });
     };
 
-    $scope.skipModel = function (model) {
+    $scope.skipModel = function (model, onlyUpdateSize) {
         $http.get('/api/skip',
             {
                 params: {
                     model: model,
                     id: $scope.formData.id,
-                    userName: $scope.userName
+                    userName: $scope.userName,
+                    onlyUpdateSize: onlyUpdateSize
                 }
             })
             .success(function (data) {
